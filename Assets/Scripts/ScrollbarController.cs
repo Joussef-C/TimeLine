@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -9,11 +7,14 @@ public class ScrollbarController : MonoBehaviour
 {
     public TimelineManager timelineManager;
     public Scrollbar scrollbar;
+    public Image fillImage;
     public TextMeshProUGUI selectedDateText;
+
+
+
+
     DateTime startDate;
     DateTime endDate;
-
-
 
     enum TimeInterval
     {
@@ -26,27 +27,34 @@ public class ScrollbarController : MonoBehaviour
 
     void Start()
     {
-        
         startDate = timelineManager.startDate;
         endDate = timelineManager.endDate;
 
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
 
-
-        Button dailyButton = GameObject.Find("day").GetComponent<Button>();
-        dailyButton.onClick.AddListener(() => SetTimeInterval((int)TimeInterval.Daily));
-
-        Button weeklyButton = GameObject.Find("week").GetComponent<Button>();
-        weeklyButton.onClick.AddListener(() => SetTimeInterval((int)TimeInterval.Weekly));
-
-        Button monthlyButton = GameObject.Find("month").GetComponent<Button>();
-        monthlyButton.onClick.AddListener(() => SetTimeInterval((int)TimeInterval.Monthly));
-    
-        
     }
 
+    void Update()
+    {
 
-     void OnScrollbarValueChanged(float value)
+
+
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        if (scroll != 0f)
+        {
+            // Adjust the selected interval based on the scroll input
+            int scrollDirection = (int)Mathf.Sign(scroll);
+            SetTimeInterval((int)selectedInterval + scrollDirection);
+
+            // Prevent going below Daily or above Monthly
+            selectedInterval = (TimeInterval)Mathf.Clamp((int)selectedInterval, (int)TimeInterval.Daily, (int)TimeInterval.Monthly);
+        }
+        
+
+  
+    }
+
+    void OnScrollbarValueChanged(float value)
     {
         DateTime selectedDate;
 
@@ -69,8 +77,8 @@ public class ScrollbarController : MonoBehaviour
                 break;
         }
 
-        selectedDateText.text = selectedDate.ToString("yyyy-MM-dd");
-
+                selectedDateText.text = selectedDate.ToString("yyyy-MM-dd");
+                        fillImage.fillAmount = value;
     }
 
     DateTime AddWeekly(DateTime startDate, float value)
@@ -109,5 +117,4 @@ public class ScrollbarController : MonoBehaviour
 
         return selectedDate;
     }
-
 }

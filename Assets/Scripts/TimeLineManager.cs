@@ -8,17 +8,25 @@ public class TimelineManager : MonoBehaviour
     public TextMeshProUGUI startDateText;
     public TextMeshProUGUI endDateText;
 
-    public DateTime startDate = new DateTime(2022, 01, 1);
-    public DateTime endDate = new DateTime(2022, 06, 15);
+    [SerializeField]
+    private int startYear = 2022, startMonth = 1, startDay = 1;
+
+    [SerializeField]
+    private int endYear = 2027, endMonth = 12, endDay = 15;
+
+    public DateTime startDate;
+    public DateTime endDate;
 
     void Start()
     {
+        startDate = new DateTime(startYear, startMonth, startDay);
+        endDate = new DateTime(endYear, endMonth, endDay);
         UpdateTimeline();
     }
 
     void UpdateTimeline()
     {
-        startDateText.text = "Start Date: " + startDate.ToString("yyyy-MM-dd");
-        endDateText.text = "End Date: " + endDate.ToString("yyyy-MM-dd");
+        startDateText.text = startDate.ToString("yyyy-MM-dd");
+        endDateText.text = endDate.ToString("yyyy-MM-dd");
     }
 }
