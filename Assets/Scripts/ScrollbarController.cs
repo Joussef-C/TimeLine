@@ -11,7 +11,9 @@ public class ScrollbarController : MonoBehaviour
     public TextMeshProUGUI selectedDateText;
 
 
-
+    public TMP_Dropdown yearDropdown;
+    public TMP_Dropdown monthDropdown;
+    public TMP_Dropdown dayDropdown;
 
     DateTime startDate;
     DateTime endDate;
@@ -32,6 +34,56 @@ public class ScrollbarController : MonoBehaviour
 
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
 
+         if (yearDropdown != null)
+        {
+            yearDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
+        }
+
+        if (monthDropdown != null)
+        {
+            monthDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
+        }
+
+        if (dayDropdown != null)
+        {
+            dayDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
+        }
+
+        InitializeDropdowns();
+
+    }
+
+    void InitializeDropdowns()
+    {
+        if (yearDropdown != null)
+        {
+            int startYear = startDate.Year;
+            int endYear = endDate.Year;
+            for (int year = startYear; year <= endYear; year++)
+            {
+                yearDropdown.options.Add(new TMP_Dropdown.OptionData(year.ToString()));
+            }
+            yearDropdown.value = 0; 
+        }
+
+        if (monthDropdown != null)
+        {
+            for (int month = 1; month <= 12; month++)
+            {
+                monthDropdown.options.Add(new TMP_Dropdown.OptionData(new DateTime(1, month, 1).ToString("MMMM")));
+            }
+            monthDropdown.value = 0; 
+        }
+
+        if (dayDropdown != null)
+        {
+            int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                dayDropdown.options.Add(new TMP_Dropdown.OptionData(day.ToString()));
+            }
+            dayDropdown.value = 0;
+        }
     }
 
     void Update()
@@ -42,11 +94,9 @@ public class ScrollbarController : MonoBehaviour
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0f)
         {
-            // Adjust the selected interval based on the scroll input
             int scrollDirection = (int)Mathf.Sign(scroll);
             SetTimeInterval((int)selectedInterval + scrollDirection);
 
-            // Prevent going below Daily or above Monthly
             selectedInterval = (TimeInterval)Mathf.Clamp((int)selectedInterval, (int)TimeInterval.Daily, (int)TimeInterval.Monthly);
         }
         
@@ -80,6 +130,19 @@ public class ScrollbarController : MonoBehaviour
                 selectedDateText.text = selectedDate.ToString("yyyy-MM-dd");
                         fillImage.fillAmount = value;
     }
+
+
+
+        void OnDropdownValueChanged(int value)
+    {
+        DateTime selectedDate = GetSelectedDateFromDropdowns();
+        float normalizedValue = Mathf.InverseLerp((float)startDate.Ticks, (float)endDate.Ticks, (float)selectedDate.Ticks);
+        scrollbar.value = Mathf.Clamp01(normalizedValue);
+
+        selectedDateText.text = selectedDate.ToString("yyyy-MM-dd");
+        fillImage.fillAmount = scrollbar.value;
+    }
+
 
     DateTime AddWeekly(DateTime startDate, float value)
     {
@@ -116,5 +179,14 @@ public class ScrollbarController : MonoBehaviour
         }
 
         return selectedDate;
+    }
+
+        public DateTime GetSelectedDateFromDropdowns()
+    {
+        int selectedYear = int.Parse(yearDropdown.options[yearDropdown.value].text);
+        int selectedMonth = monthDropdown.value + 1;
+        int selectedDay = int.Parse(dayDropdown.options[dayDropdown.value].text);
+
+        return new DateTime(selectedYear, selectedMonth, selectedDay);
     }
 }
