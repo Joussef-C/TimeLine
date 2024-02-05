@@ -9,11 +9,13 @@ public class ScrollbarController : MonoBehaviour
     public Scrollbar scrollbar;
     public Image fillImage;
     public TextMeshProUGUI selectedDateText;
+    public RectTransform timelineContainerPrefab;
+    public TextMeshProUGUI dateTextPrefab; 
+        public Button playButton;
+    private bool isPlaying = false;
 
-
-    public TMP_Dropdown yearDropdown;
-    public TMP_Dropdown monthDropdown;
-    public TMP_Dropdown dayDropdown;
+    public Sprite Playimage;
+    public Sprite Stopimage;
 
     DateTime startDate;
     DateTime endDate;
@@ -29,68 +31,97 @@ public class ScrollbarController : MonoBehaviour
 
     void Start()
     {
+
         startDate = timelineManager.startDate;
         endDate = timelineManager.endDate;
 
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
-
-         if (yearDropdown != null)
-        {
-            yearDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
-        }
-
-        if (monthDropdown != null)
-        {
-            monthDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
-        }
-
-        if (dayDropdown != null)
-        {
-            dayDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
-        }
-
-        InitializeDropdowns();
+        InitializeTimelineUI();
+        playButton.onClick.AddListener(OnPlayButtonClicked);
 
     }
 
     void InitializeDropdowns()
     {
-        if (yearDropdown != null)
+        // if (yearDropdown != null)
+        // {
+        //     int startYear = startDate.Year;
+        //     int endYear = endDate.Year;
+        //     for (int year = startYear; year <= endYear; year++)
+        //     {
+        //         yearDropdown.options.Add(new TMP_Dropdown.OptionData(year.ToString()));
+        //     }
+        //     yearDropdown.value = 0; 
+        // }
+
+        // if (monthDropdown != null)
+        // {
+        //     for (int month = 1; month <= 12; month++)
+        //     {
+        //         monthDropdown.options.Add(new TMP_Dropdown.OptionData(new DateTime(1, month, 1).ToString("MMMM")));
+        //     }
+        //     monthDropdown.value = 0; 
+        // }
+
+        // if (dayDropdown != null)
+        // {
+        //     int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
+        //     for (int day = 1; day <= daysInMonth; day++)
+        //     {
+        //         dayDropdown.options.Add(new TMP_Dropdown.OptionData(day.ToString()));
+        //     }
+        //     dayDropdown.value = 0;
+        // }
+    }
+
+
+     void OnPlayButtonClicked()
+    {
+        if (!isPlaying)
         {
-            int startYear = startDate.Year;
-            int endYear = endDate.Year;
-            for (int year = startYear; year <= endYear; year++)
-            {
-                yearDropdown.options.Add(new TMP_Dropdown.OptionData(year.ToString()));
-            }
-            yearDropdown.value = 0; 
+            InvokeRepeating("MoveHandleEveryMonth", 0f, 0.1f); // Adjust the delay as needed
+            playButton.image.sprite = Stopimage;
+
+        }
+        else
+        {
+            CancelInvoke("MoveHandleEveryMonth");
+                        playButton.image.sprite = Playimage;
+
+
         }
 
-        if (monthDropdown != null)
-        {
-            for (int month = 1; month <= 12; month++)
-            {
-                monthDropdown.options.Add(new TMP_Dropdown.OptionData(new DateTime(1, month, 1).ToString("MMMM")));
-            }
-            monthDropdown.value = 0; 
-        }
+        // Toggle the play state
+        isPlaying = !isPlaying;
+    }
 
-        if (dayDropdown != null)
+    void MoveHandleEveryMonth()
+    {
+        float currentValue = scrollbar.value;
+        float newValue = Mathf.Clamp(currentValue + 1.0f / (float)(endDate - startDate).TotalDays, 0f, 1f);
+        scrollbar.value = newValue;
+
+        OnScrollbarValueChanged(newValue);
+    }
+
+    void InitializeTimelineUI()
+    {
+        RectTransform timelineContainer = Instantiate(timelineContainerPrefab, transform);
+
+        float containerWidth = timelineContainer.sizeDelta.x;
+        int startYear = startDate.Year;
+        int endYear = endDate.Year;
+
+        for (int year = startYear; year <= endYear; year++)
         {
-            int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
-            for (int day = 1; day <= daysInMonth; day++)
-            {
-                dayDropdown.options.Add(new TMP_Dropdown.OptionData(day.ToString()));
-            }
-            dayDropdown.value = 0;
+            TextMeshProUGUI yearText = Instantiate(dateTextPrefab, timelineContainer);
+            yearText.text = year.ToString();
+            yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * (containerWidth / (endYear - startYear)), 0f); // Adjust positions
         }
     }
 
     void Update()
     {
-
-
-
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0f)
         {
@@ -99,9 +130,6 @@ public class ScrollbarController : MonoBehaviour
 
             selectedInterval = (TimeInterval)Mathf.Clamp((int)selectedInterval, (int)TimeInterval.Daily, (int)TimeInterval.Monthly);
         }
-        
-
-  
     }
 
     void OnScrollbarValueChanged(float value)
@@ -127,35 +155,10 @@ public class ScrollbarController : MonoBehaviour
                 break;
         }
 
-                selectedDateText.text = selectedDate.ToString("yyyy-MM-dd");
-                        fillImage.fillAmount = value;
+        selectedDateText.text = "Selected Date: " + selectedDate.ToString("yyyy-MM-dd");
+        fillImage.fillAmount = value;
     }
-
-
-
-        void OnDropdownValueChanged(int value)
-    {
-        DateTime selectedDate = GetSelectedDateFromDropdowns();
-        float normalizedValue = Mathf.InverseLerp((float)startDate.Ticks, (float)endDate.Ticks, (float)selectedDate.Ticks);
-        scrollbar.value = Mathf.Clamp01(normalizedValue);
-
-        selectedDateText.text = selectedDate.ToString("yyyy-MM-dd");
-        fillImage.fillAmount = scrollbar.value;
-    }
-
-
-    DateTime AddWeekly(DateTime startDate, float value)
-    {
-        int weeks = (int)((endDate - startDate).TotalDays * value / 7);
-        return startDate.AddDays(weeks * 7);
-    }
-
-    public void SetTimeInterval(int interval)
-    {
-        selectedInterval = (TimeInterval)interval;
-    }
-
-    public DateTime GetSelectedDate()
+        public DateTime GetSelectedDate()
     {
         DateTime selectedDate;
 
@@ -181,12 +184,16 @@ public class ScrollbarController : MonoBehaviour
         return selectedDate;
     }
 
-        public DateTime GetSelectedDateFromDropdowns()
-    {
-        int selectedYear = int.Parse(yearDropdown.options[yearDropdown.value].text);
-        int selectedMonth = monthDropdown.value + 1;
-        int selectedDay = int.Parse(dayDropdown.options[dayDropdown.value].text);
 
-        return new DateTime(selectedYear, selectedMonth, selectedDay);
+    void SetTimeInterval(int interval)
+    {
+        selectedInterval = (TimeInterval)interval;
+    }
+
+    DateTime AddWeekly(DateTime startDate, float value)
+    {
+        int weeks = (int)((endDate - startDate).TotalDays * value / 7);
+        return startDate.AddDays(weeks * 7);
     }
 }
+
