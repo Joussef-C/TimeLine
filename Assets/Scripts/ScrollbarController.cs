@@ -9,13 +9,24 @@ public class ScrollbarController : MonoBehaviour
     public Scrollbar scrollbar;
     public Image fillImage;
     public TextMeshProUGUI selectedDateText;
+
     public RectTransform timelineContainerPrefab;
     public TextMeshProUGUI dateTextPrefab; 
-        public Button playButton;
+    public RectTransform MonthContainerPrefab;
+    public TextMeshProUGUI MonthTextPrefab;
+
+
+    public Button playButton;
     private bool isPlaying = false;
 
     public Sprite Playimage;
     public Sprite Stopimage;
+    public int numberOfYearsToShow = 1;
+    private RectTransform currentTimelineContainer = null;
+    private RectTransform currentMonthContainer = null;
+
+
+    
 
     DateTime startDate;
     DateTime endDate;
@@ -33,13 +44,26 @@ public class ScrollbarController : MonoBehaviour
     {
 
         startDate = timelineManager.startDate;
-        endDate = timelineManager.endDate;
-
+        endDate = startDate.AddYears(numberOfYearsToShow);
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
         InitializeTimelineUI();
         playButton.onClick.AddListener(OnPlayButtonClicked);
 
     }
+
+
+    public void UpdateNumberOfYearsToShow(int newNumberOfYears)
+{
+    numberOfYearsToShow = newNumberOfYears;
+    endDate = startDate.AddYears(numberOfYearsToShow);
+
+    if (endDate > timelineManager.endDate)
+    {
+        endDate = timelineManager.endDate;
+    }
+
+    InitializeTimelineUI();
+}
 
     void InitializeDropdowns()
     {
@@ -79,7 +103,7 @@ public class ScrollbarController : MonoBehaviour
     {
         if (!isPlaying)
         {
-            InvokeRepeating("MoveHandleEveryMonth", 0f, 0.1f); // Adjust the delay as needed
+            InvokeRepeating("MoveHandleEveryMonth", 0f, 0.1f); 
             playButton.image.sprite = Stopimage;
 
         }
@@ -91,7 +115,6 @@ public class ScrollbarController : MonoBehaviour
 
         }
 
-        // Toggle the play state
         isPlaying = !isPlaying;
     }
 
@@ -106,6 +129,18 @@ public class ScrollbarController : MonoBehaviour
 
     void InitializeTimelineUI()
     {
+
+    if (currentTimelineContainer != null)
+    {
+        Destroy(currentTimelineContainer.gameObject);
+    }
+    if (currentMonthContainer != null)
+    {
+        Destroy(currentMonthContainer.gameObject);
+    }
+
+
+
         RectTransform timelineContainer = Instantiate(timelineContainerPrefab, transform);
 
         float containerWidth = timelineContainer.sizeDelta.x;
@@ -116,20 +151,45 @@ public class ScrollbarController : MonoBehaviour
         {
             TextMeshProUGUI yearText = Instantiate(dateTextPrefab, timelineContainer);
             yearText.text = year.ToString();
-            yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * (containerWidth / (endYear - startYear)), 0f); // Adjust positions
+            yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * (containerWidth / (endYear - startYear)), 0f); 
         }
+
+
+
+RectTransform MonthContainer = Instantiate(MonthContainerPrefab, transform);
+
+float MonthcontainerWidth = MonthContainer.sizeDelta.x;
+
+
+int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
+
+for (int month = 0; month <= totalMonths; month++)
+{
+    DateTime currentMonth = startDate.AddMonths(month);
+        if (currentMonth.Month == 1)
+    {
+        continue;
+    }
+    TextMeshProUGUI monthText = Instantiate(MonthTextPrefab, MonthContainer);
+    monthText.text = currentMonth.ToString("MMM");
+    monthText.rectTransform.anchoredPosition = new Vector2(month * (MonthcontainerWidth / totalMonths), 0f);
+} 
+
+        currentTimelineContainer = timelineContainer;
+        currentMonthContainer = MonthContainer;
     }
 
     void Update()
     {
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll != 0f)
-        {
-            int scrollDirection = (int)Mathf.Sign(scroll);
-            SetTimeInterval((int)selectedInterval + scrollDirection);
+                    
 
-            selectedInterval = (TimeInterval)Mathf.Clamp((int)selectedInterval, (int)TimeInterval.Daily, (int)TimeInterval.Monthly);
-        }
+    float scroll = Input.GetAxis("Mouse ScrollWheel");
+    if (scroll != 0f)
+    {
+        int newNumberOfYears = numberOfYearsToShow + (int)(scroll * 10);
+        newNumberOfYears = Mathf.Max(1, newNumberOfYears); 
+        UpdateNumberOfYearsToShow(newNumberOfYears);
+    }
     }
 
     void OnScrollbarValueChanged(float value)
