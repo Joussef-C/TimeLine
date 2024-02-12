@@ -7,13 +7,16 @@ public class ScrollbarController : MonoBehaviour
 {
     public TimelineManager timelineManager;
     public Scrollbar scrollbar;
+    private RectTransform scrollbarRect;
+
     public Image fillImage;
     public TextMeshProUGUI selectedDateText;
 
     public RectTransform timelineContainerPrefab;
-    public TextMeshProUGUI dateTextPrefab; 
+    public TextMeshProUGUI dateTextPrefab;
     public RectTransform MonthContainerPrefab;
     public TextMeshProUGUI MonthTextPrefab;
+    public RectTransform ScrollbarBG;
 
 
     public Button playButton;
@@ -21,12 +24,9 @@ public class ScrollbarController : MonoBehaviour
 
     public Sprite Playimage;
     public Sprite Stopimage;
-    public int numberOfYearsToShow = 1;
     private RectTransform currentTimelineContainer = null;
     private RectTransform currentMonthContainer = null;
-
-
-    
+    float yearWidth = 500f;
 
     DateTime startDate;
     DateTime endDate;
@@ -44,73 +44,33 @@ public class ScrollbarController : MonoBehaviour
     {
 
         startDate = timelineManager.startDate;
-        endDate = startDate.AddYears(numberOfYearsToShow);
+
+        endDate = timelineManager.endDate;
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
         InitializeTimelineUI();
         playButton.onClick.AddListener(OnPlayButtonClicked);
+        scrollbarRect = scrollbar.GetComponent<RectTransform>();
+
 
     }
 
 
-    public void UpdateNumberOfYearsToShow(int newNumberOfYears)
-{
-    numberOfYearsToShow = newNumberOfYears;
-    endDate = startDate.AddYears(numberOfYearsToShow);
-
-    if (endDate > timelineManager.endDate)
-    {
-        endDate = timelineManager.endDate;
-    }
-
-    InitializeTimelineUI();
-}
-
-    void InitializeDropdowns()
-    {
-        // if (yearDropdown != null)
-        // {
-        //     int startYear = startDate.Year;
-        //     int endYear = endDate.Year;
-        //     for (int year = startYear; year <= endYear; year++)
-        //     {
-        //         yearDropdown.options.Add(new TMP_Dropdown.OptionData(year.ToString()));
-        //     }
-        //     yearDropdown.value = 0; 
-        // }
-
-        // if (monthDropdown != null)
-        // {
-        //     for (int month = 1; month <= 12; month++)
-        //     {
-        //         monthDropdown.options.Add(new TMP_Dropdown.OptionData(new DateTime(1, month, 1).ToString("MMMM")));
-        //     }
-        //     monthDropdown.value = 0; 
-        // }
-
-        // if (dayDropdown != null)
-        // {
-        //     int daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
-        //     for (int day = 1; day <= daysInMonth; day++)
-        //     {
-        //         dayDropdown.options.Add(new TMP_Dropdown.OptionData(day.ToString()));
-        //     }
-        //     dayDropdown.value = 0;
-        // }
-    }
 
 
-     void OnPlayButtonClicked()
+
+
+    void OnPlayButtonClicked()
     {
         if (!isPlaying)
         {
-            InvokeRepeating("MoveHandleEveryMonth", 0f, 0.1f); 
+            InvokeRepeating("MoveHandleEveryMonth", 0f, 0.1f);
             playButton.image.sprite = Stopimage;
 
         }
         else
         {
             CancelInvoke("MoveHandleEveryMonth");
-                        playButton.image.sprite = Playimage;
+            playButton.image.sprite = Playimage;
 
 
         }
@@ -129,67 +89,145 @@ public class ScrollbarController : MonoBehaviour
 
     void InitializeTimelineUI()
     {
-
-    if (currentTimelineContainer != null)
-    {
-        Destroy(currentTimelineContainer.gameObject);
-    }
-    if (currentMonthContainer != null)
-    {
-        Destroy(currentMonthContainer.gameObject);
-    }
-
-
+        if (currentTimelineContainer != null)
+        {
+            Destroy(currentTimelineContainer.gameObject);
+        }
+        if (currentMonthContainer != null)
+        {
+            Destroy(currentMonthContainer.gameObject);
+        }
 
         RectTransform timelineContainer = Instantiate(timelineContainerPrefab, transform);
 
-        float containerWidth = timelineContainer.sizeDelta.x;
         int startYear = startDate.Year;
         int endYear = endDate.Year;
+
+        float totalYearWidth = ((endYear - startYear + 1) * yearWidth) - yearWidth;
+
+        float minimumWidth = 1763f;
+        if (totalYearWidth < minimumWidth)
+        {
+            yearWidth = minimumWidth / (endYear - startYear + 1);
+            totalYearWidth = ((endYear - startYear + 1) * yearWidth) - yearWidth;
+        }
 
         for (int year = startYear; year <= endYear; year++)
         {
             TextMeshProUGUI yearText = Instantiate(dateTextPrefab, timelineContainer);
             yearText.text = year.ToString();
-            yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * (containerWidth / (endYear - startYear)), 0f); 
+            yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * yearWidth, 0f);
         }
 
+        timelineContainer.sizeDelta = new Vector2(totalYearWidth, timelineContainer.sizeDelta.y);
 
 
-RectTransform MonthContainer = Instantiate(MonthContainerPrefab, transform);
-
-float MonthcontainerWidth = MonthContainer.sizeDelta.x;
 
 
-int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
 
-for (int month = 0; month <= totalMonths; month++)
-{
-    DateTime currentMonth = startDate.AddMonths(month);
-        if (currentMonth.Month == 1)
-    {
-        continue;
-    }
-    TextMeshProUGUI monthText = Instantiate(MonthTextPrefab, MonthContainer);
-    monthText.text = currentMonth.ToString("MMM");
-    monthText.rectTransform.anchoredPosition = new Vector2(month * (MonthcontainerWidth / totalMonths), 0f);
-} 
+        RectTransform uiRectTransform = ScrollbarBG.GetComponent<RectTransform>();
+        uiRectTransform.sizeDelta = new Vector2(timelineContainer.sizeDelta.x, uiRectTransform.sizeDelta.y);
+
+
+
+
+
+        RectTransform MonthContainer = Instantiate(MonthContainerPrefab, transform);
+        MonthContainer.sizeDelta = new Vector2(timelineContainer.sizeDelta.x, MonthContainer.sizeDelta.y);
+
+        int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
+        float monthWidth = timelineContainer.sizeDelta.x / totalMonths;
+
+        for (int month = 0; month <= totalMonths; month++)
+        {
+            DateTime currentMonth = startDate.AddMonths(month);
+            if (currentMonth.Month == 1)
+            {
+                continue;
+            }
+            TextMeshProUGUI monthText = Instantiate(MonthTextPrefab, MonthContainer);
+            monthText.text = currentMonth.ToString("MMM");
+            float monthPosition = month * monthWidth;
+            float nextMonthPosition = (month + 1) * monthWidth;
+            float monthTextWidth = LayoutUtility.GetPreferredWidth(monthText.rectTransform);
+            float threshold = -50.0f;
+            if (nextMonthPosition - monthPosition < monthTextWidth + threshold)
+            {
+                monthText.gameObject.SetActive(false);
+            }
+            else
+            {
+                monthText.rectTransform.anchoredPosition = new Vector2(monthPosition, 0f);
+            }
+        }
 
         currentTimelineContainer = timelineContainer;
         currentMonthContainer = MonthContainer;
     }
 
+
+
+
+
     void Update()
     {
-                    
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
 
-    float scroll = Input.GetAxis("Mouse ScrollWheel");
-    if (scroll != 0f)
-    {
-        int newNumberOfYears = numberOfYearsToShow + (int)(scroll * 10);
-        newNumberOfYears = Mathf.Max(1, newNumberOfYears); 
-        UpdateNumberOfYearsToShow(newNumberOfYears);
+        Vector3 mousePosition = Input.mousePosition;
+        float screenCenterX = Screen.width / 2;
+
+        if (scroll > 0f)
+        {
+            yearWidth += scroll * 100;
+
+
+            Debug.Log("Scrolled up");
+            if (mousePosition.x < screenCenterX)
+            {
+                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x + 20, scrollbarRect.anchoredPosition.y);
+            }
+            else
+            {
+                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x - 20, scrollbarRect.anchoredPosition.y);
+            }
+            InitializeTimelineUI();
+
+        }
+        else if (scroll < 0f)
+        {
+            yearWidth += scroll * 100;
+
+            Debug.Log("Scrolled Down");
+
+            if (mousePosition.x < screenCenterX)
+            {
+                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x - 40, scrollbarRect.anchoredPosition.y);
+            }
+            else
+            {
+                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x + 40, scrollbarRect.anchoredPosition.y);
+            }
+            InitializeTimelineUI();
+        }
+
     }
+
+
+
+    public void SelectDate(DateTime date)
+    {
+        if (date < startDate || date > endDate)
+        {
+            throw new ArgumentOutOfRangeException("date", "The selected date is outside the valid range.");
+        }
+
+        double totalDays = (endDate - startDate).TotalDays;
+        double selectedDays = (date - startDate).TotalDays;
+
+        float value = (float)(selectedDays / totalDays);
+
+        scrollbar.value = value;
+        OnScrollbarValueChanged(value);
     }
 
     void OnScrollbarValueChanged(float value)
@@ -218,7 +256,7 @@ for (int month = 0; month <= totalMonths; month++)
         selectedDateText.text = "Selected Date: " + selectedDate.ToString("yyyy-MM-dd");
         fillImage.fillAmount = value;
     }
-        public DateTime GetSelectedDate()
+    public DateTime GetSelectedDate()
     {
         DateTime selectedDate;
 
