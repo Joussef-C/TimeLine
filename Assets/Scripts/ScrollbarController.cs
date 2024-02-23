@@ -53,12 +53,6 @@ public class ScrollbarController : MonoBehaviour
 
 
     }
-
-
-
-
-
-
     void OnPlayButtonClicked()
     {
         if (!isPlaying)
@@ -92,6 +86,7 @@ public class ScrollbarController : MonoBehaviour
         if (currentTimelineContainer != null)
         {
             Destroy(currentTimelineContainer.gameObject);
+
         }
         if (currentMonthContainer != null)
         {
@@ -108,12 +103,17 @@ public class ScrollbarController : MonoBehaviour
         float minimumWidth = 1763f;
         if (totalYearWidth < minimumWidth)
         {
+            Debug.Log("MAXIMUM WIDTH REACHED");
+
             yearWidth = minimumWidth / (endYear - startYear + 1);
             totalYearWidth = ((endYear - startYear + 1) * yearWidth) - yearWidth;
+
+
         }
 
         for (int year = startYear; year <= endYear; year++)
         {
+
             TextMeshProUGUI yearText = Instantiate(dateTextPrefab, timelineContainer);
             yearText.text = year.ToString();
             yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * yearWidth, 0f);
@@ -128,8 +128,8 @@ public class ScrollbarController : MonoBehaviour
         RectTransform uiRectTransform = ScrollbarBG.GetComponent<RectTransform>();
         uiRectTransform.sizeDelta = new Vector2(timelineContainer.sizeDelta.x, uiRectTransform.sizeDelta.y);
 
-
-
+        RectTransform scrollbarReact = scrollbar.GetComponent<RectTransform>();
+        scrollbarReact.sizeDelta = new Vector2(timelineContainer.sizeDelta.x, scrollbarReact.sizeDelta.y);
 
 
         RectTransform MonthContainer = Instantiate(MonthContainerPrefab, transform);
@@ -175,41 +175,61 @@ public class ScrollbarController : MonoBehaviour
 
         Vector3 mousePosition = Input.mousePosition;
         float screenCenterX = Screen.width / 2;
+        float distanceFromCenter = Mathf.Abs(mousePosition.x - screenCenterX); // Calculate the distance from the center
+        float scrollFactor = distanceFromCenter / screenCenterX; // Normalize the distance to get a factor between 0 and 1
+
+        float containerWidthHalf = currentTimelineContainer.sizeDelta.x / 2;
+        float negativeContainerWidthHalf = -containerWidthHalf;
+        float minScrollPosition = negativeContainerWidthHalf + 857f; // Set your minimum limit
+        float maxScrollPosition = containerWidthHalf - 857f; // Set your maximum limit
+
+        int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
+        float monthWidth = currentTimelineContainer.sizeDelta.x / totalMonths;
+        float threshold = 50.0f; // threshold 
+
+
 
         if (scroll > 0f)
         {
-            yearWidth += scroll * 100;
+            if (monthWidth < threshold)
+            {
+                yearWidth += scroll * 350;
+            }
 
 
             Debug.Log("Scrolled up");
+            Debug.Log("monthwidth" + monthWidth);
+
+            float newPosition;
             if (mousePosition.x < screenCenterX)
             {
-                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x + 20, scrollbarRect.anchoredPosition.y);
+                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
             }
             else
             {
-                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x - 20, scrollbarRect.anchoredPosition.y);
+                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
             }
+            scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
             InitializeTimelineUI();
-
         }
         else if (scroll < 0f)
         {
-            yearWidth += scroll * 100;
+
+            yearWidth += scroll * 350;
 
             Debug.Log("Scrolled Down");
-
+            float newPosition;
             if (mousePosition.x < screenCenterX)
             {
-                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x - 40, scrollbarRect.anchoredPosition.y);
+                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
             }
             else
             {
-                scrollbarRect.anchoredPosition = new Vector2(scrollbarRect.anchoredPosition.x + 40, scrollbarRect.anchoredPosition.y);
+                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
             }
+            scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
             InitializeTimelineUI();
         }
-
     }
 
 
