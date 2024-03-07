@@ -17,9 +17,13 @@ public class ScrollbarController : MonoBehaviour
     public RectTransform MonthContainerPrefab;
     public TextMeshProUGUI MonthTextPrefab;
     public RectTransform ScrollbarBG;
+    public Sprite yourStartDateSprite;
+    public Sprite yourEndDateSprite;
 
 
     public Button playButton;
+    public Button ForwardButton;
+    public Button BackwardButton;
     private bool isPlaying = false;
 
     public Sprite Playimage;
@@ -49,6 +53,8 @@ public class ScrollbarController : MonoBehaviour
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
         InitializeTimelineUI();
         playButton.onClick.AddListener(OnPlayButtonClicked);
+        ForwardButton.onClick.AddListener(OnForwardButtonClicked);
+        BackwardButton.onClick.AddListener(OnBackwardButtonClicked);
         scrollbarRect = scrollbar.GetComponent<RectTransform>();
 
 
@@ -70,6 +76,15 @@ public class ScrollbarController : MonoBehaviour
         }
 
         isPlaying = !isPlaying;
+    }
+
+    void OnForwardButtonClicked()
+    {
+
+    }
+    void OnBackwardButtonClicked()
+    {
+
     }
 
     void MoveHandleEveryMonth()
@@ -111,13 +126,47 @@ public class ScrollbarController : MonoBehaviour
 
         }
 
+
+        GameObject startDateImage = new GameObject("StartDateImage");
+        startDateImage.AddComponent<Image>();
+        startDateImage.GetComponent<Image>().sprite = yourStartDateSprite; // Replace with your start date sprite
+        startDateImage.transform.SetParent(timelineContainer.transform, false);
+        startDateImage.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+        RectTransform startDateImageRect = startDateImage.GetComponent<RectTransform>();
+        startDateImageRect.anchorMin = new Vector2(0, 0.5f);
+        startDateImageRect.anchorMax = new Vector2(0, 0.5f);
+        startDateImageRect.pivot = new Vector2(0.5f, 0.5f);
+        startDateImageRect.sizeDelta = new Vector2(36.98f, 64f);
+        startDateImageRect.anchoredPosition = new Vector2(0, 32f);
+
+
+
         for (int year = startYear; year <= endYear; year++)
         {
 
             TextMeshProUGUI yearText = Instantiate(dateTextPrefab, timelineContainer);
             yearText.text = year.ToString();
             yearText.rectTransform.anchoredPosition = new Vector2((year - startYear) * yearWidth, 0f);
+
+
         }
+
+        GameObject endDateImage = new GameObject("EndDateImage");
+        endDateImage.AddComponent<Image>();
+        endDateImage.GetComponent<Image>().sprite = yourEndDateSprite; // Replace with your end date sprite
+        endDateImage.transform.SetParent(timelineContainer.transform, false);
+        RectTransform endDateImageRect = endDateImage.GetComponent<RectTransform>();
+        endDateImageRect.anchorMin = new Vector2(0, 0.5f);
+        endDateImageRect.anchorMax = new Vector2(0, 0.5f);
+        endDateImageRect.pivot = new Vector2(0.5f, 0.5f);
+        endDateImageRect.sizeDelta = new Vector2(36.98f, 64f);
+
+        double totalDays = (endDate - startDate).TotalDays;
+        float endDatePosition = (float)(totalDays / totalDays) * totalYearWidth;
+        endDateImage.GetComponent<RectTransform>().anchoredPosition = new Vector2(endDatePosition, 32f);
+
+
+
 
         timelineContainer.sizeDelta = new Vector2(totalYearWidth, timelineContainer.sizeDelta.y);
 
@@ -157,7 +206,7 @@ public class ScrollbarController : MonoBehaviour
             }
             else
             {
-                monthText.rectTransform.anchoredPosition = new Vector2(monthPosition, 0f);
+                monthText.rectTransform.anchoredPosition = new Vector2(monthPosition, -5f);
             }
         }
 
@@ -273,7 +322,7 @@ public class ScrollbarController : MonoBehaviour
                 break;
         }
 
-        selectedDateText.text = "Selected Date: " + selectedDate.ToString("yyyy-MM-dd");
+        selectedDateText.text = selectedDate.ToString("MMM yyyy");
         fillImage.fillAmount = value;
     }
     public DateTime GetSelectedDate()
