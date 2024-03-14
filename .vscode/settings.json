@@ -58,5 +58,6 @@
     },
     "[csharp]": {
         "editor.defaultFormatter": "ms-dotnettools.csharp"
-    }
+    },
+    "CodeGPT.apiKey": "Anthropic"
 }

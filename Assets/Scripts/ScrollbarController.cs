@@ -1,9 +1,11 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using TMPro;
 using UnityEngine.UI;
 
-public class ScrollbarController : MonoBehaviour
+
+public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public TimelineManager timelineManager;
     public Scrollbar scrollbar;
@@ -31,6 +33,9 @@ public class ScrollbarController : MonoBehaviour
     private RectTransform currentTimelineContainer = null;
     private RectTransform currentMonthContainer = null;
     float yearWidth = 500f;
+    private float HanddleSpeed = 0.015f;
+    private bool isMouseOver = false;
+
 
     DateTime startDate;
     DateTime endDate;
@@ -59,17 +64,39 @@ public class ScrollbarController : MonoBehaviour
 
 
     }
+
+
+
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        isMouseOver = true;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        isMouseOver = false;
+    }
+    void MoveHandleForward()
+    {
+        MoveHandleEveryMonth(true);
+    }
+
+    void MoveHandleBackward()
+    {
+        MoveHandleEveryMonth(false);
+    }
     void OnPlayButtonClicked()
     {
         if (!isPlaying)
         {
-            InvokeRepeating("MoveHandleEveryMonth", 0f, 0.1f);
+            InvokeRepeating("MoveHandleForward", 0f, HanddleSpeed);
             playButton.image.sprite = Stopimage;
 
         }
         else
         {
-            CancelInvoke("MoveHandleEveryMonth");
+            CancelInvoke("MoveHandleForward");
             playButton.image.sprite = Playimage;
 
 
@@ -78,21 +105,60 @@ public class ScrollbarController : MonoBehaviour
         isPlaying = !isPlaying;
     }
 
+
+
     void OnForwardButtonClicked()
     {
+        if ((HanddleSpeed > 0.0001F) || HanddleSpeed >= 0.015f)
+        {
+            //0.003125
+            HanddleSpeed *= 0.25f;
+            if (isPlaying)
+            {
+                CancelInvoke("MoveHandleForward");
+                InvokeRepeating("MoveHandleForward", 0f, HanddleSpeed);
+            }
+        }
 
     }
     void OnBackwardButtonClicked()
     {
+        if (HanddleSpeed < 0.015f)
+        {
+
+            if (isPlaying)
+            {
+                HanddleSpeed += HanddleSpeed * 2.5f;
+                CancelInvoke("MoveHandleForward");
+                InvokeRepeating("MoveHandleForward", 0f, HanddleSpeed);
+
+            }
+        }
+        else if (HanddleSpeed >= 0.015f)
+        {
+            return;
+        }
 
     }
 
-    void MoveHandleEveryMonth()
+
+
+    void MoveHandleEveryMonth(bool isForward)
     {
         float currentValue = scrollbar.value;
-        float newValue = Mathf.Clamp(currentValue + 1.0f / (float)(endDate - startDate).TotalDays, 0f, 1f);
-        scrollbar.value = newValue;
+        float step = 0.5f / (float)(endDate - startDate).TotalDays;
+        float newValue;
 
+        if (isForward)
+        {
+            newValue = Mathf.Clamp(currentValue + step, 0f, 1f);
+        }
+        else
+        {
+            newValue = Mathf.Clamp(currentValue - step, 0f, 1f);
+        }
+
+        scrollbar.value = newValue;
         OnScrollbarValueChanged(newValue);
     }
 
@@ -220,64 +286,69 @@ public class ScrollbarController : MonoBehaviour
 
     void Update()
     {
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-
-        Vector3 mousePosition = Input.mousePosition;
-        float screenCenterX = Screen.width / 2;
-        float distanceFromCenter = Mathf.Abs(mousePosition.x - screenCenterX); // Calculate the distance from the center
-        float scrollFactor = distanceFromCenter / screenCenterX; // Normalize the distance to get a factor between 0 and 1
-
-        float containerWidthHalf = currentTimelineContainer.sizeDelta.x / 2;
-        float negativeContainerWidthHalf = -containerWidthHalf;
-        float minScrollPosition = negativeContainerWidthHalf + 857f; // Set your minimum limit
-        float maxScrollPosition = containerWidthHalf - 857f; // Set your maximum limit
-
-        int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
-        float monthWidth = currentTimelineContainer.sizeDelta.x / totalMonths;
-        float threshold = 50.0f; // threshold 
-
-
-
-        if (scroll > 0f)
+        if (isMouseOver)
         {
-            if (monthWidth < threshold)
+
+
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+
+            Vector3 mousePosition = Input.mousePosition;
+            float screenCenterX = Screen.width / 2;
+            float distanceFromCenter = Mathf.Abs(mousePosition.x - screenCenterX); // Calculate the distance from the center
+            float scrollFactor = distanceFromCenter / screenCenterX; // Normalize the distance to get a factor between 0 and 1
+
+            float containerWidthHalf = currentTimelineContainer.sizeDelta.x / 2;
+            float negativeContainerWidthHalf = -containerWidthHalf;
+            float minScrollPosition = negativeContainerWidthHalf + 857f; // Set your minimum limit
+            float maxScrollPosition = containerWidthHalf - 857f; // Set your maximum limit
+
+            int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
+            float monthWidth = currentTimelineContainer.sizeDelta.x / totalMonths;
+            float threshold = 50.0f; // threshold 
+
+
+
+            if (scroll > 0f)
             {
+                if (monthWidth < threshold)
+                {
+                    yearWidth += scroll * 350;
+                }
+
+
+                Debug.Log("Scrolled up");
+                Debug.Log("monthwidth" + monthWidth);
+
+                float newPosition;
+                if (mousePosition.x < screenCenterX)
+                {
+                    newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
+                }
+                else
+                {
+                    newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
+                }
+                scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
+                InitializeTimelineUI();
+            }
+            else if (scroll < 0f)
+            {
+
                 yearWidth += scroll * 350;
-            }
 
-
-            Debug.Log("Scrolled up");
-            Debug.Log("monthwidth" + monthWidth);
-
-            float newPosition;
-            if (mousePosition.x < screenCenterX)
-            {
-                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
+                Debug.Log("Scrolled Down");
+                float newPosition;
+                if (mousePosition.x < screenCenterX)
+                {
+                    newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
+                }
+                else
+                {
+                    newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
+                }
+                scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
+                InitializeTimelineUI();
             }
-            else
-            {
-                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
-            }
-            scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
-            InitializeTimelineUI();
-        }
-        else if (scroll < 0f)
-        {
-
-            yearWidth += scroll * 350;
-
-            Debug.Log("Scrolled Down");
-            float newPosition;
-            if (mousePosition.x < screenCenterX)
-            {
-                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
-            }
-            else
-            {
-                newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
-            }
-            scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
-            InitializeTimelineUI();
         }
     }
 
