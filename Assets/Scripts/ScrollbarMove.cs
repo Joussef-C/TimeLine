@@ -22,8 +22,4 @@ public class ScrollbarMove : MonoBehaviour
 
     }
 
-    void Update()
-    {
-
-    }
 }
