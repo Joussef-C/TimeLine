@@ -35,6 +35,8 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
     float yearWidth = 500f;
     private float HanddleSpeed = 0.015f;
     private bool isMouseOver = false;
+    float minimumWidth = 1860f; // Replace with your desired minimum width
+
 
 
 
@@ -52,18 +54,15 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
 
     void Start()
     {
-
         startDate = timelineManager.startDate;
-
         endDate = timelineManager.endDate;
+
         scrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
         InitializeTimelineUI();
         playButton.onClick.AddListener(OnPlayButtonClicked);
         ForwardButton.onClick.AddListener(OnForwardButtonClicked);
         BackwardButton.onClick.AddListener(OnBackwardButtonClicked);
         scrollbarRect = scrollbar.GetComponent<RectTransform>();
-
-
     }
 
 
@@ -175,39 +174,19 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
             Destroy(currentMonthContainer.gameObject);
         }
 
+
         RectTransform timelineContainer = Instantiate(timelineContainerPrefab, transform);
 
         int startYear = startDate.Year;
         int endYear = endDate.Year;
 
-        float totalYearWidth = ((endYear - startYear + 1) * yearWidth) - yearWidth;
-
-        float minimumWidth = 1763f;
-        if (totalYearWidth < minimumWidth)
-        {
-            Debug.Log("MAXIMUM WIDTH REACHED");
-
-            yearWidth = minimumWidth / (endYear - startYear + 1);
-            totalYearWidth = ((endYear - startYear + 1) * yearWidth) - yearWidth;
 
 
 
-        }
-
-
-        GameObject startDateImage = new GameObject("StartDateImage");
-        startDateImage.AddComponent<Image>();
-        startDateImage.GetComponent<Image>().sprite = yourStartDateSprite; // Replace with your start date sprite
-        startDateImage.transform.SetParent(timelineContainer.transform, false);
-        startDateImage.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
-        RectTransform startDateImageRect = startDateImage.GetComponent<RectTransform>();
-        startDateImageRect.anchorMin = new Vector2(0, 0.5f);
-        startDateImageRect.anchorMax = new Vector2(0, 0.5f);
-        startDateImageRect.pivot = new Vector2(0.5f, 0.5f);
-        startDateImageRect.sizeDelta = new Vector2(36.98f, 64f);
-        startDateImageRect.anchoredPosition = new Vector2(0, 32f);
-
-
+        /// update 22/03
+        float totalYearWidth = Mathf.Max(((endYear - startYear + 1) * yearWidth) - yearWidth, minimumWidth);
+        totalYearWidth = ((endYear - startYear + 1) * yearWidth) - yearWidth;
+        ///
 
         for (int year = startYear; year <= endYear; year++)
         {
@@ -219,19 +198,10 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
 
         }
 
-        GameObject endDateImage = new GameObject("EndDateImage");
-        endDateImage.AddComponent<Image>();
-        endDateImage.GetComponent<Image>().sprite = yourEndDateSprite; // Replace with your end date sprite
-        endDateImage.transform.SetParent(timelineContainer.transform, false);
-        RectTransform endDateImageRect = endDateImage.GetComponent<RectTransform>();
-        endDateImageRect.anchorMin = new Vector2(0, 0.5f);
-        endDateImageRect.anchorMax = new Vector2(0, 0.5f);
-        endDateImageRect.pivot = new Vector2(0.5f, 0.5f);
-        endDateImageRect.sizeDelta = new Vector2(36.98f, 64f);
+
 
         double totalDays = (endDate - startDate).TotalDays;
         float endDatePosition = (float)(totalDays / totalDays) * totalYearWidth;
-        endDateImage.GetComponent<RectTransform>().anchoredPosition = new Vector2(endDatePosition, 32f);
 
 
 
@@ -289,17 +259,6 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
     void Update()
     {
         float scroll = Input.GetAxis("Mouse ScrollWheel");
-
-        Vector3 mousePosition = Input.mousePosition;
-        float screenCenterX = Screen.width / 2;
-        float distanceFromCenter = Mathf.Abs(mousePosition.x - screenCenterX); // Calculate the distance from the center
-        float scrollFactor = distanceFromCenter / screenCenterX; // Normalize the distance to get a factor between 0 and 1
-
-        float containerWidthHalf = currentTimelineContainer.sizeDelta.x / 2;
-        float negativeContainerWidthHalf = -containerWidthHalf;
-        float minScrollPosition = negativeContainerWidthHalf + 1600f; // Set your minimum limit
-        float maxScrollPosition = containerWidthHalf - 1600f; // Set your maximum limit
-
         int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
         float monthWidth = currentTimelineContainer.sizeDelta.x / totalMonths;
         float threshold = 50.0f; // threshold 
@@ -313,74 +272,20 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
                 {
                     yearWidth += scroll * 350;
                 }
+                scrollbarRect.anchoredPosition = new Vector2(1f, scrollbarRect.anchoredPosition.y);
 
-
-                Debug.Log("Scrolled up");
-                Debug.Log("monthwidth" + monthWidth);
-
-                float newPosition;
-                if (monthWidth < threshold)
-                {
-                    if (mousePosition.x < screenCenterX)
-                    {
-                        newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x + 300 * scrollFactor, minScrollPosition, maxScrollPosition);
-                        Debug.Log(monthWidth);
-
-
-
-                    }
-                    else
-                    {
-                        newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x - 300 * scrollFactor, minScrollPosition, maxScrollPosition);
-                    }
-                    scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
-                }
                 InitializeTimelineUI();
             }
 
 
 
-            else if
-            (scroll < 0f)
+            else if (scroll < 0f)
             {
-
-                yearWidth += scroll * 350;
-
-                Debug.Log("Scrolled Down");
-                float newPosition;
-
-                if (mousePosition.x < screenCenterX && scrollbarRect.sizeDelta.x > 1763f)
+                if (scrollbarRect.sizeDelta.x > minimumWidth)
                 {
-
-
-                    newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x * scrollFactor, minScrollPosition, maxScrollPosition);
-
-
-
-                    Debug.Log("zoomin-");
-                    Debug.Log("newpostion" + newPosition);
-                    Debug.Log("scrollbar POSX" + scrollbarRect.anchoredPosition.x);
-                    Debug.Log("scrollbar widht" + scrollbarRect.sizeDelta.x);
-
-                    scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
-                    Debug.Log("maxscrollpsoition" + maxScrollPosition);
+                    yearWidth += scroll * 350;
                 }
-                else if (mousePosition.x > screenCenterX && scrollbarRect.sizeDelta.x > 1763f)
-                {
-                    newPosition = Mathf.Clamp(scrollbarRect.anchoredPosition.x * scrollFactor, minScrollPosition, maxScrollPosition);
-                    Debug.Log("zoomin+");
-                    scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
-                    Debug.Log("newPosition" + newPosition);
-
-                }
-                else
-                {
-                    newPosition = 1f;
-                    Debug.Log("MAXIMUM WIDTH REACHED");
-                }
-
-                scrollbarRect.anchoredPosition = new Vector2(newPosition, scrollbarRect.anchoredPosition.y);
-
+                scrollbarRect.anchoredPosition = new Vector2(1f, scrollbarRect.anchoredPosition.y);
 
                 InitializeTimelineUI();
             }

@@ -19,8 +19,8 @@ public class TimelineManager : MonoBehaviour
 
     void Start()
     {
-        startDate = new DateTime(startYear, startMonth, startDay);
-        endDate = new DateTime(endYear, endMonth, endDay);
+        startDate = new DateTime(startYear + 1, 1, 1);
+        endDate = new DateTime(endYear + 1, 1, 1);
         UpdateTimeline();
     }
 

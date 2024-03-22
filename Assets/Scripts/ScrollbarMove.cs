@@ -14,12 +14,14 @@ public class ScrollbarMove : MonoBehaviour
         initialX = uiElement.anchoredPosition.x;
         scrollbar.onValueChanged.AddListener(ChangePosition);
     }
-
     void ChangePosition(float value)
     {
-        float maxX = (uiElement.rect.width / 2) - (uiElement.parent.GetComponent<RectTransform>().rect.width / 2) + 100f;
-        uiElement.anchoredPosition = new Vector2((value * maxX * 2) - maxX, uiElement.anchoredPosition.y);
-
+        float width = uiElement.GetComponent<RectTransform>().rect.width;
+        if (width > 1860f)
+        {
+            float maxX = (uiElement.rect.width / 2) - (uiElement.parent.GetComponent<RectTransform>().rect.width / 2) + 100f;
+            uiElement.anchoredPosition = new Vector2((value * maxX * 2) - maxX, uiElement.anchoredPosition.y);
+        }
     }
 
 }
