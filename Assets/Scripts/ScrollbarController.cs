@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using TMPro;
 using UnityEngine.UI;
+using System.Collections;
 
 
 public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
@@ -36,8 +37,11 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
     private float HanddleSpeed = 0.015f;
     private bool isMouseOver = false;
     float minimumWidth = 1860f; // Replace with your desired minimum width
+    private bool isCooldown = false;
 
-
+    public int day = 1;
+    public int month = 1;
+    public int year = 2000;
 
 
     DateTime startDate;
@@ -162,6 +166,29 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
         OnScrollbarValueChanged(newValue);
     }
 
+
+
+    void MoveHandleToDate(DateTime date)
+    {
+        if (date < startDate || date > endDate)
+        {
+            Debug.LogError("The inputted date is outside the valid range.");
+            return;
+        }
+
+        int totalDays = (endDate.Year - startDate.Year) * 365 + (endDate.Month - startDate.Month) * 30 + (endDate.Day - startDate.Day);
+        int selectedDays = (date.Year - startDate.Year) * 365 + (date.Month - startDate.Month) * 30 + (date.Day - startDate.Day);
+
+        float value = (float)selectedDays / totalDays;
+
+        scrollbar.value = value;
+        OnScrollbarValueChanged(value);
+    }
+
+
+
+
+
     void InitializeTimelineUI()
     {
         if (currentTimelineContainer != null)
@@ -258,40 +285,77 @@ public class ScrollbarController : MonoBehaviour, IPointerEnterHandler, IPointer
 
     void Update()
     {
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
-        float monthWidth = currentTimelineContainer.sizeDelta.x / totalMonths;
-        float threshold = 50.0f; // threshold 
-        if (isMouseOver)
+        if (!isCooldown)
         {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            int totalMonths = ((endDate.Year - startDate.Year) * 12) + endDate.Month - startDate.Month;
+            float monthWidth = currentTimelineContainer.sizeDelta.x / totalMonths;
+            float threshold = 50.0f; // threshold 
 
 
-            if (scroll > 0f)
+
+            if (isMouseOver)
             {
-                if (monthWidth < threshold)
-                {
-                    yearWidth += scroll * 350;
-                }
-                scrollbarRect.anchoredPosition = new Vector2(1f, scrollbarRect.anchoredPosition.y);
 
-                InitializeTimelineUI();
+
+                if (scroll > 0f)
+                {
+                    if (monthWidth < threshold)
+                    {
+                        yearWidth += scroll * 350;
+                    }
+                    scrollbarRect.anchoredPosition = new Vector2(1f, scrollbarRect.anchoredPosition.y);
+
+                    InitializeTimelineUI();
+                }
+
+
+
+                else if (scroll < 0f)
+                {
+                    if (scrollbarRect.sizeDelta.x > minimumWidth)
+                    {
+                        yearWidth += scroll * 350;
+                    }
+                    scrollbarRect.anchoredPosition = new Vector2(1f, scrollbarRect.anchoredPosition.y);
+
+                    InitializeTimelineUI();
+                }
             }
 
-
-
-            else if (scroll < 0f)
+            if (scroll != 0f)
             {
-                if (scrollbarRect.sizeDelta.x > minimumWidth)
-                {
-                    yearWidth += scroll * 350;
-                }
-                scrollbarRect.anchoredPosition = new Vector2(1f, scrollbarRect.anchoredPosition.y);
-
-                InitializeTimelineUI();
+                StartCoroutine(CooldownCoroutine());
             }
 
         }
+
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            // Validate the Date
+            if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > DateTime.DaysInMonth(year, month))
+            {
+                Debug.LogError("Invalid year, month, or day.");
+            }
+            else
+            {
+                MoveHandleToDate(new DateTime(year, month, day));
+            }
+        }
+
+
     }
+
+    IEnumerator CooldownCoroutine()
+    {
+        isCooldown = true;
+        yield return new WaitForSeconds(0.04f); // Adjust this value to change the cooldown duration
+        isCooldown = false;
+    }
+
+
+
+
 
 
 

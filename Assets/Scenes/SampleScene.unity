@@ -8953,6 +8953,9 @@ MonoBehaviour:
   BackwardButton: {fileID: 2047041552}
   Playimage: {fileID: 21300000, guid: 9928c992c82c31a40a6d65b0134ce74a, type: 3}
   Stopimage: {fileID: 21300000, guid: 913954bf2933b7d4bb11dcfd9145296f, type: 3}
+  day: 1
+  month: 1
+  year: 2040
 --- !u!114 &1645484885
 MonoBehaviour:
   m_ObjectHideFlags: 0
