@@ -1,57 +1,99 @@
-Shader "Custom/SectioningShader"
-{
-    Properties
-    {
-        _SectioningPlane("Sectioning Plane", Vector) = (0,1,0,0)  // Define the sectioning plane (normal)
-        _MainTex("Main Texture", 2D) = "white" {} // Assuming the object has a texture, adjust this accordingly if not
-    }
+Shader "CrossSection/OnePlaneBSP" {
+	Properties{
+		_Color("Color", Color) = (1,1,1,1)
+		_CrossColor("Cross Section Color", Color) = (1,1,1,1)
+		_MainTex("Albedo (RGB)", 2D) = "white" {}
+		_Glossiness("Smoothness", Range(0,1)) = 0.5
+		_Metallic("Metallic", Range(0,1)) = 0.0
+		_PlaneNormal("PlaneNormal",Vector) = (0,1,0,0)
+		_PlanePosition("PlanePosition",Vector) = (0,0,0,1)
+		_StencilMask("Stencil Mask", Range(0, 255)) = 255
+	}
+	SubShader {
+		Tags { "RenderType"="Opaque" }
+		//LOD 200
+		Stencil
+		{
+			Ref [_StencilMask]
+			CompBack Always
+			PassBack Replace
 
-    SubShader
-    {
-        Tags { "RenderType" = "Opaque" }
+			CompFront Always
+			PassFront Zero
+		}
+		Cull Back
+			CGPROGRAM
+			// Physically based Standard lighting model, and enable shadows on all light types
+#pragma surface surf Standard fullforwardshadows
 
-        Pass
-        {
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #include "UnityCG.cginc"
+			// Use shader model 3.0 target, to get nicer looking lighting
+#pragma target 3.0
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
+			sampler2D _MainTex;
 
-            struct v2f
-            {
-                float4 vertex : SV_POSITION;
-                float2 uv : TEXCOORD0;
-            };
+		struct Input {
+			float2 uv_MainTex;
 
-            float4 _SectioningPlane;
-            sampler2D _MainTex;
+			float3 worldPos;
+		};
 
-            v2f vert(appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = v.uv;
-                return o;
-            }
+		half _Glossiness;
+		half _Metallic;
+		fixed4 _Color;
+		fixed4 _CrossColor;
+		fixed3 _PlaneNormal;
+		fixed3 _PlanePosition;
+		bool checkVisability(fixed3 worldPos)
+		{
+			float dotProd1 = dot(worldPos - _PlanePosition, _PlaneNormal);
+			return dotProd1 > 0  ;
+		}
+		void surf(Input IN, inout SurfaceOutputStandard o) {
+			if (checkVisability(IN.worldPos))discard;
+			fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
+			o.Albedo = c.rgb;
+			// Metallic and smoothness come from slider variables
+			o.Metallic = _Metallic;
+			o.Smoothness = _Glossiness;
+			o.Alpha = c.a;
+		}
+		ENDCG
+		
+			Cull Front
+			CGPROGRAM
+#pragma surface surf NoLighting  noambient
 
-            half4 frag(v2f i) : SV_Target
-            {
-                // Sample the object's original color
-                half4 originalColor = tex2D(_MainTex, i.uv);
+		struct Input {
+			half2 uv_MainTex;
+			float3 worldPos;
 
-                // Clip fragments based on the sectioning plane
-                float distance = dot(i.vertex, _SectioningPlane);
-                clip(distance);
+		};
+		sampler2D _MainTex;
+		fixed4 _Color;
+		fixed4 _CrossColor;
+		fixed3 _PlaneNormal;
+		fixed3 _PlanePosition;
+		bool checkVisability(fixed3 worldPos)
+		{
+			float dotProd1 = dot(worldPos - _PlanePosition, _PlaneNormal);
+			return dotProd1 >0 ;
+		}
+		fixed4 LightingNoLighting(SurfaceOutput s, fixed3 lightDir, fixed atten)
+		{
+			fixed4 c;
+			c.rgb = s.Albedo;
+			c.a = s.Alpha;
+			return c;
+		}
 
-                return originalColor;
-            }
-            ENDCG
-        }
-    }
+		void surf(Input IN, inout SurfaceOutput o)
+		{
+			if (checkVisability(IN.worldPos))discard;
+			o.Albedo = _CrossColor;
+
+		}
+			ENDCG
+		
+	}
+	//FallBack "Diffuse"
 }
